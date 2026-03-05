@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pregnancy Food Safety Checker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<header>
+    <h1>Pregnancy Food Safety Checker</h1>
+    <a href="/settings">Manage Ingredients</a>
+</header>
+
+<div class="container">
+
+    <!-- Manual ingredient check -->
+    <div class="card">
+        <h2>Check Ingredients</h2>
+        <div class="input-row">
+            <input type="text" id="ingredientInput"
+                   placeholder="e.g. caffeine, ginger, tuna">
+            <button class="btn btn-primary" onclick="checkIngredients()">Check</button>
+        </div>
+        <div id="spinner">
+            <div class="spin"></div> Checking...
+        </div>
+    </div>
+
+    <!-- Image upload / OCR -->
+    <div class="card">
+        <h2>Scan Ingredients Label</h2>
+        <div class="upload-row">
+            <input type="file" id="imageInput" accept="image/jpeg,image/png">
+            <button class="btn btn-secondary" onclick="uploadImage()">Scan Image</button>
+        </div>
+        <div id="ocrPreview" class="ocr-preview"></div>
+    </div>
+
+    <!-- Results -->
+    <div id="results"></div>
+
+</div>
+
+<script>
+    async function checkIngredients(prefilled) {
+        const input = document.getElementById("ingredientInput");
+        const text  = prefilled || input.value.trim();
+        if (!text) return;
+
+        document.getElementById("spinner").style.display = "flex";
+        document.getElementById("results").innerHTML = "";
+
+        const res  = await fetch("/check", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ingredients: text })
+        });
+        const data = await res.json();
+        document.getElementById("spinner").style.display = "none";
+
+        if (data.error) {
+            document.getElementById("results").innerHTML =
+                `<p style="color:red">${data.error}</p>`;
+            return;
+        }
+
+        renderResults(data.results);
+    }
+
+    function renderResults(results) {
+        const container = document.getElementById("results");
+        container.innerHTML = "";
+
+        results.forEach(r => {
+            const status  = r.status.toLowerCase();
+            const badgeCls = `badge badge-${status}`;
+            const itemCls  = `result-item status-${status}`;
+
+            container.innerHTML += `
+                <div class="${itemCls}">
+                    <span class="name">${r.name}</span>
+                    <span class="${badgeCls}">${r.status}</span>
+                    <span class="notes">${r.notes}</span>
+                </div>`;
+        });
+    }
+
+    async function uploadImage() {
+        const fileInput = document.getElementById("imageInput");
+        if (!fileInput.files.length) {
+            alert("Please select an image first.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("image", fileInput.files[0]);
+
+        const preview = document.getElementById("ocrPreview");
+        preview.style.display = "block";
+        preview.textContent = "Processing image...";
+
+        const res  = await fetch("/upload", { method: "POST", body: formData });
+        const data = await res.json();
+
+        if (data.error) {
+            preview.textContent = "Error: " + data.error;
+            return;
+        }
+
+        preview.textContent = "Detected: " + data.text;
+        document.getElementById("ingredientInput").value = data.text;
+        checkIngredients(data.text);
+    }
+
+    // Allow Enter key to trigger check
+    document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("ingredientInput")
+            .addEventListener("keydown", e => {
+                if (e.key === "Enter") checkIngredients();
+            });
+    });
+</script>
+
+</body>
+</html>

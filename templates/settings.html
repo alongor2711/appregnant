@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Ingredients</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<header>
+    <h1>Manage Ingredients</h1>
+    <a href="/">Back to Checker</a>
+</header>
+
+<div class="container">
+
+    <!-- Add ingredient -->
+    <div class="card">
+        <h2>Add / Update Ingredient</h2>
+        <form action="/settings/add" method="POST">
+            <div class="form-row">
+                <input type="text" name="name"   placeholder="Ingredient name" required>
+                <select name="status" required>
+                    <option value="">Status</option>
+                    <option value="Safe">Safe</option>
+                    <option value="Caution">Caution</option>
+                    <option value="Unsafe">Unsafe</option>
+                </select>
+                <input type="text" name="notes" placeholder="Notes (optional)" style="flex:2">
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Ingredient table -->
+    <div class="card">
+        <h2>All Ingredients ({{ ingredients|length }})</h2>
+        {% if ingredients %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Ingredient</th>
+                    <th>Status</th>
+                    <th>Notes</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for ing in ingredients %}
+            <tr class="status-{{ ing.status|lower }}">
+                <td><strong>{{ ing.name|title }}</strong></td>
+                <td>
+                    <span class="badge badge-{{ ing.status|lower }}">{{ ing.status }}</span>
+                </td>
+                <td>{{ ing.notes }}</td>
+                <td>
+                    <form action="/settings/delete" method="POST" style="margin:0">
+                        <input type="hidden" name="name" value="{{ ing.name }}">
+                        <button type="submit" class="btn btn-danger btn-sm"
+                                onclick="return confirm('Delete {{ ing.name|title }}?')">
+                            Delete
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+            <p style="color:#888; font-size:0.9rem">
+                No ingredients yet. Add one above or run <code>python seed.py</code>.
+            </p>
+        {% endif %}
+    </div>
+
+</div>
+
+</body>
+</html>
