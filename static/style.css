@@ -2,15 +2,15 @@
 
 body {
     font-family: 'Segoe UI', sans-serif;
-    background: #f8f4f0;
+    background: linear-gradient(160deg, #f3e5f5 0%, #fce4ec 100%);
     color: #333;
     min-height: 100vh;
 }
 
 header {
-    background: #c2185b;
+    background: linear-gradient(135deg, #6a1b9a, #c2185b);
     color: white;
-    padding: 1rem 2rem;
+    padding: 1.2rem 2rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
