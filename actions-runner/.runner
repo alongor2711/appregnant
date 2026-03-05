@@ -1,0 +1,11 @@
+﻿{
+  "agentId": 2,
+  "agentName": "ALON-ASUS",
+  "poolId": 1,
+  "poolName": "Default",
+  "serverUrl": "https://pipelinesghubeus12.actions.githubusercontent.com/8AB8Tx8SkNZD1luqVcXYbK3InyBRe8yWU4V1IBRarWvn56ONRr/",
+  "gitHubUrl": "https://github.com/alongor2711/appregnant",
+  "workFolder": "_work",
+  "useV2Flow": true,
+  "serverUrlV2": "https://broker.actions.githubusercontent.com/"
+}

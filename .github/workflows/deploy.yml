@@ -1,0 +1,29 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Point Docker to Minikube daemon
+        run: minikube docker-env | Invoke-Expression
+
+      - name: Build Docker image
+        run: docker build -t pregnancy-checker:latest .
+
+      - name: Apply Kubernetes manifests
+        run: kubectl apply -f k8s/
+
+      - name: Rollout restart
+        run: kubectl rollout restart deployment/pregnancy-checker
+
+      - name: Wait for rollout
+        run: kubectl rollout status deployment/pregnancy-checker --timeout=120s
