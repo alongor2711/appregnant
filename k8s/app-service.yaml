@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pregnancy-checker-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: pregnancy-checker
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
+      nodePort: 30001
