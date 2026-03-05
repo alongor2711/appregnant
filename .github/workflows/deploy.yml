@@ -13,11 +13,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Point Docker to Minikube daemon
-        run: minikube docker-env | Invoke-Expression
-
-      - name: Build Docker image
-        run: docker build --no-cache -t pregnancy-checker:latest ${{ github.workspace }}
+      - name: Build Docker image inside Minikube
+        run: |
+          minikube docker-env | Invoke-Expression
+          docker build --no-cache -t pregnancy-checker:latest ${{ github.workspace }}
 
       - name: Apply Kubernetes manifests
         run: kubectl apply -f k8s/
