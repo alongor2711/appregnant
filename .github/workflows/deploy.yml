@@ -1,4 +1,4 @@
-name: Build and Deploy
+name: CI/CD Pipeline
 
 on:
   push:
@@ -6,8 +6,70 @@ on:
       - main
 
 jobs:
+
+  # ── Job 1: Lint + Unit Tests ─────────────────────────────────────────────────
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          # Install only what tests need — skip easyocr (+ PyTorch) since OCR is mocked
+          pip install flask psycopg2-binary pillow gunicorn
+          pip install -r requirements-dev.txt
+
+      - name: Lint with flake8
+        run: |
+          flake8 app.py database.py ocr.py --max-line-length=100
+
+      - name: Run tests with pytest
+        run: |
+          pytest tests/ -v
+
+  # ── Job 2: Security Scan ─────────────────────────────────────────────────────
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Audit dependencies for CVEs
+        run: pip-audit -r requirements.txt
+
+      - name: Scan filesystem with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL,HIGH
+          exit-code: 1
+
+  # ── Job 3: Build & Deploy ────────────────────────────────────────────────────
   deploy:
+    name: Deploy
     runs-on: self-hosted
+    needs: security
 
     steps:
       - name: Checkout code
@@ -16,13 +78,21 @@ jobs:
       - name: Build Docker image inside Minikube
         run: |
           minikube docker-env | Invoke-Expression
-          docker build --no-cache -t pregnancy-checker:latest ${{ github.workspace }}
+          docker build --no-cache -t pregnancy-checker:${{ github.sha }} ${{ github.workspace }}
+          docker tag pregnancy-checker:${{ github.sha }} pregnancy-checker:latest
 
       - name: Apply Kubernetes manifests
         run: kubectl apply -f k8s/
 
-      - name: Rollout restart
-        run: kubectl rollout restart deployment/pregnancy-checker
+      - name: Update deployment image
+        run: |
+          kubectl set image deployment/pregnancy-checker \
+          pregnancy-checker=pregnancy-checker:${{ github.sha }} \
+          -n pregnancy-checker
 
       - name: Wait for rollout
-        run: kubectl rollout status deployment/pregnancy-checker --timeout=120s
+        run: kubectl rollout status deployment/pregnancy-checker -n pregnancy-checker --timeout=120s
+
+      - name: Rollback on failure
+        if: failure()
+        run: kubectl rollout undo deployment/pregnancy-checker -n pregnancy-checker
